@@ -86,6 +86,14 @@ def train(dataloader, num_epochs, device, results_dir=DEFAULT_RESULTS_DIR, log_e
         vutils.save_image(fake_fixed, os.path.join(samples_dir, f"epoch_{epoch:02d}.png"),
                            normalize=True, nrow=8)
 
+        # Overwrite checkpoints/loss curve each epoch so a mid-run disconnect
+        # (e.g. Colab timeout) only loses progress since the last epoch, not the whole run.
+        checkpoints_dir = os.path.join(results_dir, "checkpoints")
+        os.makedirs(checkpoints_dir, exist_ok=True)
+        torch.save(netG.state_dict(), os.path.join(checkpoints_dir, "generator.pth"))
+        torch.save(netD.state_dict(), os.path.join(checkpoints_dir, "discriminator.pth"))
+        plot_losses(history, os.path.join(results_dir, "loss_curve.png"))
+
     return netG, netD, history
 
 
@@ -129,15 +137,8 @@ def main():
         epochs = 5
         args.log_every = 10
 
-    netG, netD, history = train(dataloader, epochs, device, results_dir=args.results_dir,
-                                 log_every=args.log_every)
+    train(dataloader, epochs, device, results_dir=args.results_dir, log_every=args.log_every)
 
-    checkpoints_dir = os.path.join(args.results_dir, "checkpoints")
-    os.makedirs(checkpoints_dir, exist_ok=True)
-    torch.save(netG.state_dict(), os.path.join(checkpoints_dir, "generator.pth"))
-    torch.save(netD.state_dict(), os.path.join(checkpoints_dir, "discriminator.pth"))
-
-    plot_losses(history, os.path.join(args.results_dir, "loss_curve.png"))
     print("Training complete. Checkpoints, sample grids, and loss curve saved to", args.results_dir)
 
 
